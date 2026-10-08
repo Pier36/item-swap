@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>책갈피 스왑</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap">
+<style>
+/* Layout: 상단 고정 탭바 → 탭별 단일 컬럼(대시보드 그리드 + 실시간 피드). 책갈피 카드는 세계문학전집 표지(회색 바탕·컬러 띠·세로 책등)를 축약한 형태 */
+:root{
+  --paper:#ECEBE7; --card:#F7F6F3; --ink:#1D1E23; --muted:#6B6C73; --line:#D6D4CE;
+  --accent:#1F6FEB; --accent-ink:#fff; --have:#0E8A62; --need:#C2410C; --gs:#1F6FEB;
+  --sheet:#FFFFFF; --shadow:0 1px 2px rgba(20,20,30,.06),0 6px 18px rgba(20,20,30,.06);
+  --f-display:"Nanum Gothic","NanumGothic","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-body:"Nanum Gothic","NanumGothic","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"Nanum Gothic","NanumGothic","Apple SD Gothic Neo",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#16171B; --card:#202127; --ink:#ECEBE7; --muted:#9C9DA5; --line:#33343B;
+  --accent:#5B9BFF; --accent-ink:#0B0C10; --have:#34C38F; --need:#FB8A4C; --gs:#5B9BFF;
+  --sheet:#1B1C21; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.35); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#16171B; --card:#202127; --ink:#ECEBE7; --muted:#9C9DA5; --line:#33343B;
+  --accent:#5B9BFF; --accent-ink:#0B0C10; --have:#34C38F; --need:#FB8A4C; --gs:#5B9BFF;
+  --sheet:#1B1C21; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.35); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:0 96px}
+
+/* header */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.hd{max-width:1080px;margin:0 auto;padding:12px 16px 0;display:flex;flex-direction:column;gap:10px}
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.brand h1{font-family:var(--f-display);font-weight:800;font-size:22px;margin:0;letter-spacing:-.01em}
+.brand small{color:var(--muted);font-size:12px}
+.me{margin-left:auto;font-family:var(--f-mono);font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.me b{color:var(--ink);font-weight:500}
+nav{display:flex;gap:4px;overflow-x:auto}
+nav button{background:none;border:0;padding:8px 12px 10px;border-bottom:2px solid transparent;color:var(--muted);font-weight:600;white-space:nowrap}
+nav button[aria-selected="true"]{color:var(--ink);border-color:var(--ink)}
+nav .cnt{font-family:var(--f-mono);font-size:11px;margin-left:4px;color:var(--accent)}
+
+section.tab{display:flex;flex-direction:column;gap:20px;padding-top:20px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.sec-h h2{font-family:var(--f-display);font-size:19px;margin:0;text-wrap:balance}
+.sec-h p{margin:0;color:var(--muted);font-size:13px}
+
+/* summary bar */
+.summary{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--card)}
+.pill.have{color:var(--have);border-color:color-mix(in srgb,var(--have) 40%,var(--line))}
+.pill.need{color:var(--need);border-color:color-mix(in srgb,var(--need) 40%,var(--line))}
+.pill.gs{color:var(--gs);border-color:color-mix(in srgb,var(--gs) 40%,var(--line))}
+.legend{margin-left:auto;color:var(--muted);font-size:12px}
+
+/* bookmark grid */
+.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+@media (max-width:820px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:620px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}}
+@media (max-width:400px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.bm{position:relative;background:var(--card);border-radius:6px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;border:2px solid transparent;transition:border-color .15s,transform .15s}
+.bm.gsx{border-color:color-mix(in srgb,var(--gs) 55%,transparent)}
+.bm.is-have{border-color:var(--have)}
+.bm.is-need{border-color:var(--need)}
+.cover{all:unset;cursor:pointer;display:grid;grid-template-columns:14px 1fr;aspect-ratio:3/3.4;max-width:100%}
+.spine{background:var(--c);opacity:.85}
+.face{position:relative;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;padding:10px 10px 12px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--c) 22%,var(--card)) 0 46%,var(--card) 46%)}
+.face .no{position:absolute;top:8px;left:10px;font-family:var(--f-mono);font-size:10px;color:var(--muted)}
+.face .band{height:5px;width:62%;background:var(--c)}
+.face .t{font-family:var(--f-display);font-weight:700;font-size:14px;line-height:1.25;word-break:keep-all;text-wrap:balance}
+.face .pub{font-size:10px;color:var(--muted)}
+.gs-tag{position:absolute;top:6px;right:6px;background:var(--gs);color:var(--accent-ink);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;line-height:1.3}
+.state-tag{position:absolute;top:6px;right:6px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;color:#fff}
+.is-have .state-tag{background:var(--have)} .is-need .state-tag{background:var(--need)}
+.bm.gsx.is-have .gs-tag,.bm.gsx.is-need .gs-tag{top:28px}
+.ctrl{display:flex;flex-direction:column;gap:6px;padding:8px;border-top:1px solid var(--line)}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.seg button{border:1px solid var(--line);background:transparent;border-radius:5px;padding:4px 0;font-size:12px;font-weight:600;color:var(--muted)}
+.seg button.on-have{background:var(--have);border-color:var(--have);color:#fff}
+.seg button.on-need{background:var(--need);border-color:var(--need);color:#fff}
+.tg{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11px;color:var(--muted)}
+.tg[aria-disabled="true"]{opacity:.4}
+.switch{position:relative;width:34px;height:18px;flex:none}
+.switch input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.switch span{position:absolute;inset:0;border-radius:99px;background:var(--line);transition:.2s;pointer-events:none}
+.switch span::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:.2s}
+.switch input:checked+span{background:var(--ink)}
+.switch input:checked+span::after{transform:translateX(16px)}
+.switch input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.tg b{color:var(--ink);font-weight:600;min-width:3.6em;text-align:right}
+
+/* compose panel */
+.panel{background:var(--sheet);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.row > label.fld{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);flex:1 1 200px;min-width:0}
+.fld input,.fld select,.fld textarea{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:8px 10px;width:100%}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;cursor:pointer;user-select:none}
+.chk:has(input:checked){border-color:var(--ink);background:var(--ink);color:var(--paper)}
+.chk input{margin:0;accent-color:var(--ink)}
+.lock{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:flex-start}
+.btn{border:0;border-radius:8px;padding:10px 16px;font-weight:700;background:var(--ink);color:var(--paper)}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.sm{padding:6px 10px;font-size:12px;border-radius:6px}
+
+/* feed */
+.feed{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:720px){.feed{grid-template-columns:1fr}}
+.post{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0;animation:pop .35s ease}
+.post.match{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.post.mine{border-style:dashed}
+@keyframes pop{from{transform:translateY(-6px);opacity:.5}to{transform:none;opacity:1}}
+.p-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ava{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:13px;color:#fff;flex:none}
+.alias{font-weight:600}
+.ttl{margin-left:auto;font-family:var(--f-mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mbadge{background:var(--accent);color:var(--accent-ink);font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px}
+.lines{display:flex;flex-direction:column;gap:6px}
+.ln{display:flex;gap:8px;align-items:flex-start}
+.ln > span:first-child{flex:none;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;color:#fff;margin-top:2px}
+.ln.h > span:first-child{background:var(--have)} .ln.n > span:first-child{background:var(--need)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;min-width:0}
+.chip{font-size:12px;padding:2px 8px;border-radius:4px;background:color-mix(in srgb,var(--c) 18%,var(--card));border-left:3px solid var(--c)}
+.chip.hit{outline:2px solid var(--accent);outline-offset:0}
+.chip small{color:var(--muted);margin-left:3px}
+.p-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.p-foot .ship{display:flex;gap:4px;flex-wrap:wrap}
+.p-foot .ship span{border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+.p-foot .btn{margin-left:auto}
+.empty{color:var(--muted);text-align:center;padding:24px;border:1px dashed var(--line);border-radius:10px}
+.price{font-family:var(--f-mono);font-weight:500;font-size:15px;color:var(--ink)}
+
+/* brag */
+.brag-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:720px){.brag-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:420px){.brag-grid{grid-template-columns:1fr}}
+.brag{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.brag .ph{aspect-ratio:4/3;max-width:100%;display:grid;grid-template-columns:repeat(10,1fr);gap:2px;padding:10px;background:color-mix(in srgb,var(--ink) 6%,var(--card))}
+.brag .ph i{background:var(--c);border-radius:2px}
+.brag img{aspect-ratio:4/3;width:100%;object-fit:cover}
+.brag .bd{padding:12px;display:flex;flex-direction:column;gap:8px}
+.brag .bd p{margin:0;font-family:var(--f-display);font-size:15px}
+.cheer{align-self:flex-start;border:1px solid var(--line);background:transparent;border-radius:99px;padding:4px 10px;font-size:12px}
+.cheer.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.ex{font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 4px;margin-left:4px}
+
+/* sheet (chat) */
+.scrim{position:fixed;inset:0;background:rgba(10,10,15,.45);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--sheet);width:min(560px,100%);max-height:88%;border-radius:16px 16px 0 0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (min-width:700px){.scrim{align-items:center}.sheet{border-radius:16px}}
+.sh-h{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.sh-h .x{margin-left:auto;background:none;border:0;font-size:20px;line-height:1;color:var(--muted)}
+.deal{padding:10px 16px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.msgs{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-height:180px}
+.msg{max-width:78%;padding:8px 12px;border-radius:14px;font-size:13px;word-break:break-word}
+.msg.them{background:color-mix(in srgb,var(--ink) 8%,var(--sheet));align-self:flex-start;border-bottom-left-radius:4px}
+.msg.me{background:var(--accent);color:var(--accent-ink);align-self:flex-end;border-bottom-right-radius:4px}
+.msg.sys{align-self:center;background:none;color:var(--muted);font-size:12px;text-align:center;max-width:100%}
+.secret{align-self:stretch;max-width:100%;border:1.5px solid var(--ink);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:6px;background:var(--card)}
+.secret h4{margin:0;font-family:var(--f-display);font-size:15px}
+.secret .kv{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.secret code{font-family:var(--f-mono);font-size:14px;background:color-mix(in srgb,var(--ink) 8%,var(--card));padding:3px 8px;border-radius:5px;user-select:all}
+.secret small{color:var(--muted)}
+.sh-f{border-top:1px solid var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.confirm-row{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.confirm-row .btn{margin-left:auto}
+.dots{display:flex;gap:6px;align-items:center}
+.dot{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--muted)}
+.dot.ok{background:var(--have);border-color:var(--have)}
+.send{display:flex;gap:8px}
+.send input{flex:1;min-width:0;border:1px solid var(--line);background:var(--card);border-radius:20px;padding:9px 14px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:8px;font-size:13px;z-index:60;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+
+
+<header>
+  <div class="hd">
+    <div class="brand">
+      <h1>책갈피 스왑</h1>
+      <small>패러렐 북커버 책갈피 20종 · 익명 교환소</small>
+      <div class="me">나는 <b id="myAlias"></b></div>
+    </div>
+    <nav role="tablist">
+      <button role="tab" data-tab="trade" aria-selected="true">교환<span class="cnt" id="cntTrade"></span></button>
+      <button role="tab" data-tab="sale" aria-selected="false">판매 장터<span class="cnt" id="cntSale"></span></button>
+      <button role="tab" data-tab="brag" aria-selected="false">20종 완성 자랑</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- 교환 탭 -->
+  <section class="tab" id="tab-trade">
+    <div class="sec-h">
+      <h2>내 책갈피 체크하기</h2>
+      <p>표지를 누르면 없음 → 남아요 → 구해요 순으로 바뀝니다</p>
+    </div>
+    <div class="summary" id="summary"></div>
+    <div class="grid" id="grid"></div>
+
+    <div class="panel">
+      <div class="sec-h"><h2>거래 방식 · 비밀 연락처</h2></div>
+      <div class="row" id="shipRow"></div>
+      <div class="row">
+        <label class="fld">당근마켓 닉네임
+          <input id="karrot" placeholder="예: 책갈피모아요" autocomplete="off"></label>
+        <label class="fld">직거래 동네
+          <input id="area" placeholder="예: 성북구 안암동" autocomplete="off"></label>
+      </div>
+      <div class="lock">🔒 <span>이 두 정보는 피드에 절대 노출되지 않습니다. 양쪽 모두 ‘교환 성사’를 누른 뒤, 거래 상대 한 명의 화면에만 공개됩니다.</span></div>
+      <div class="row">
+        <button class="btn primary" id="postTrade">교환 피드에 올리기</button>
+        <span class="legend" id="postHint"></span>
+      </div>
+    </div>
+
+    <div class="sec-h">
+      <h2>실시간 교환 피드</h2>
+      <p>글은 24시간 뒤 자동으로 사라집니다 · 파란 테두리는 나와 맞는 상대</p>
+    </div>
+    <div class="feed" id="feedTrade"></div>
+  </section>
+
+  <!-- 판매 탭 -->
+  <section class="tab" id="tab-sale" hidden>
+    <div class="panel">
+      <div class="sec-h"><h2>남는 책갈피 판매 등록</h2><p>교환 탭에서 ‘남아요’로 체크한 책갈피가 판매 목록이 됩니다</p></div>
+      <div class="row">
+        <label class="fld">개당 가격 (원)
+          <input id="price" type="number" min="0" step="500" value="3000"></label>
+        <label class="fld">한 줄 메모
+          <input id="saleNote" placeholder="예: 미개봉 일괄 구매 시 할인" maxlength="40"></label>
+      </div>
+      <div class="row"><span class="legend" style="margin-left:0" id="saleList"></span></div>
+      <div class="row"><button class="btn primary" id="postSale">장터에 올리기</button></div>
+    </div>
+    <div class="sec-h"><h2>판매 중</h2><p>구매 문의도 익명 대화로 시작합니다</p></div>
+    <div class="feed" id="feedSale"></div>
+  </section>
+
+  <!-- 자랑 탭 -->
+  <section class="tab" id="tab-brag" hidden>
+    <div class="panel">
+      <div class="sec-h"><h2>20종 완성 인증하기</h2><p>사진 한 장과 한 마디면 충분해요</p></div>
+      <div class="row">
+        <label class="fld">인증샷
+          <input type="file" id="bragFile" accept="image/*"></label>
+        <label class="fld">한 마디
+          <input id="bragText" maxlength="60" placeholder="예: GS25 세 곳 돌고 드디어 완성!"></label>
+      </div>
+      <div class="row"><button class="btn primary" id="postBrag">자랑하기</button></div>
+    </div>
+    <div class="brag-grid" id="bragFeed"></div>
+  </section>
+</main>
+
+<div class="scrim" id="scrim" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+    <div class="sh-h"><div class="ava" id="shAva"></div><strong id="shTitle"></strong><button class="x" id="shClose" aria-label="닫기">×</button></div>
+    <div class="deal" id="shDeal"></div>
+    <div class="msgs" id="msgs"></div>
+    <div class="sh-f">
+      <div class="confirm-row">
+        <span class="dots"><span class="dot" id="dotMe"></span>나 <span class="dot" id="dotThem"></span>상대</span>
+        <span id="confirmHint">둘 다 누르면 연락처가 서로에게만 열립니다</span>
+        <button class="btn sm primary" id="btnDone">교환 성사</button>
+      </div>
+      <form class="send" id="sendForm"><input id="msgIn" placeholder="익명 메시지 보내기" autocomplete="off"><button class="btn sm">보내기</button></form>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ───────── 1. 카탈로그 (책갈피 20종) ───────── */
+const BOOKS = [
+  {id:1, t:"변신·시골의사", c:"#3A3F5C", gs:true},
+  {id:2, t:"날개처럼 울고 싶었다", c:"#2E8B57", gs:true, poem:true},
+  {id:3, t:"나쁜 소년이 서 있다", c:"#7B3FA0", gs:true, poem:true},
+  {id:4, t:"오만과 편견", c:"#9E2A4B"},
+  {id:5, t:"괴테와의 대화 1", c:"#D98C7A"},
+  {id:6, t:"햄릿", c:"#2F8F6B"},
+  {id:7, t:"폭풍의 언덕", c:"#1F5E4A"},
+  {id:8, t:"허클베리 핀의 모험", c:"#5C6B2E"},
+  {id:9, t:"깜자(쥐)", c:"#5A4BA8"},
+  {id:10,t:"한여름 밤의 꿈", c:"#C87A2C"},
+  {id:11,t:"명심보감", c:"#6B5B45"},
+  {id:12,t:"사랑에 대하여", c:"#C0473B"},
+  {id:13,t:"로미오와 줄리엣", c:"#2A9D9A"},
+  {id:14,t:"안나 카레니나 1", c:"#C24D63"},
+  {id:15,t:"부실감자", c:"#4B3C8E"},
+  {id:16,t:"당신의 세계는 아직도 바다와", c:"#6D3FA0", poem:true},
+  {id:17,t:"숲의 소실점을 향해", c:"#3C9A4E", poem:true},
+  {id:18,t:"아무도 미워하지 않고", c:"#8DB33A", poem:true},
+  {id:19,t:"자기만의 방·3기니", c:"#7A5F4C"},
+  {id:20,t:"동물농장", c:"#4F7F6A"},
+];
+const B = Object.fromEntries(BOOKS.map(b=>[b.id,b]));
+const SHIP = {direct:"직거래", half:"반값택배", normal:"일반택배"};
+
+/* ───────── 2. 익명 ID ───────── */
+const ADJ=["조용한","밤샘","책등","여백의","새벽","느긋한","줄긋는","책장","초판","귀퉁이"];
+const NOUN=["독자","책벌레","수집가","갈피","문고","서재","낭독자","필사러"];
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const anonAlias=()=>`${pick(ADJ)} ${pick(NOUN)} #${String(1000+Math.floor(Math.random()*9000))}`;
+const uid=()=>Math.random().toString(36).slice(2,10);
+const hue=s=>{let h=0;for(const ch of s)h=(h*31+ch.charCodeAt(0))%360;return h};
+
+/* ───────── 3. 상태 ─────────
+   me.secret는 클라이언트 → 서버로만 전송되고, 피드 객체(posts)에는 절대 들어가지 않는다. */
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+const me = store.get("bm.me",null) || {
+  id:uid(), alias:anonAlias(),
+  marks:{ 4:{s:"have",sealed:true}, 12:{s:"have",sealed:false}, 6:{s:"have",sealed:true}, 1:{s:"need"}, 13:{s:"need"} },
+  ship:{direct:true,half:true,normal:false},
+  secret:{karrot:"",area:""}
+};
+const save=()=>store.set("bm.me",me);
+
+const HOUR=3600e3, TTL=24*HOUR;
+const mkPost=(o)=>({id:uid(),uid:uid(),alias:anonAlias(),ts:Date.now()-Math.random()*20*HOUR,example:true,...o});
+let posts=[
+  mkPost({type:"trade",have:[{id:1,sealed:true},{id:9,sealed:false}],need:[4,17],ship:["direct","half"]}),
+  mkPost({type:"trade",have:[{id:13,sealed:true},{id:2,sealed:true}],need:[12,20],ship:["half","normal"]}),
+  mkPost({type:"trade",have:[{id:7,sealed:false}],need:[3,5],ship:["direct"]}),
+  mkPost({type:"trade",have:[{id:19,sealed:true},{id:20,sealed:true}],need:[6,10,11],ship:["half"]}),
+  mkPost({type:"trade",have:[{id:15,sealed:true}],need:[14],ship:["direct","normal"]}),
+  mkPost({type:"sale",have:[{id:3,sealed:true}],price:6000,note:"GS25 한정, 미개봉 그대로",ship:["half"]}),
+  mkPost({type:"sale",have:[{id:16,sealed:false},{id:17,sealed:false},{id:18,sealed:false}],price:2500,note:"시집 세트 일괄 7천",ship:["half","normal"]}),
+  mkPost({type:"sale",have:[{id:8,sealed:true}],price:3000,note:"",ship:["direct"]}),
+];
+const brags=[
+  {id:uid(),alias:anonAlias(),text:"GS25 세 군데 돌고 마지막 한정판까지 완성",cheers:41,example:true},
+  {id:uid(),alias:anonAlias(),text:"교환 다섯 번 만에 20/20, 다들 감사해요",cheers:27,example:true},
+  {id:uid(),alias:anonAlias(),text:"미개봉 20종 그대로 보관 중",cheers:18,example:true},
+];
+const deals={}; // dealId -> {postId, parties:[meId, otherId], confirmed:{}, msgs:[]}
+
+/* ───────── 4. 매칭 ───────── */
+const myHave=()=>Object.entries(me.marks).filter(([,v])=>v.s==="have").map(([k])=>+k);
+const myNeed=()=>Object.entries(me.marks).filter(([,v])=>v.s==="need").map(([k])=>+k);
+function matchOf(p){
+  const iGet=p.have.map(h=>h.id).filter(id=>myNeed().includes(id));
+  const iGive=(p.need||[]).filter(id=>myHave().includes(id));
+  return {iGet,iGive,score:iGet.length+iGive.length,mutual:iGet.length>0&&(p.type==="sale"||iGive.length>0)};
+}
+
+/* ───────── 5. 비밀 정보 공개 로직 (서버의 revealFor와 같은 규칙) ───────── */
+const vault={}; // userId -> secret  (서버에서는 암호화된 별도 테이블)
+function revealFor(dealId, viewerId){
+  const d=deals[dealId];
+  if(!d||!d.parties.includes(viewerId)) return null;                  // 거래 당사자가 아님
+  if(!d.parties.every(pid=>d.confirmed[pid])) return null;           // 양쪽 모두 성사 전
+  const other=d.parties.find(pid=>pid!==viewerId);
+  return vault[other]?{...vault[other]}:null;                         // 상대 한 명의 정보만
+}
+
+/* ───────── 6. 렌더링 ───────── */
+const $=s=>document.querySelector(s);
+const el=(h)=>{const t=document.createElement("template");t.innerHTML=h.trim();return t.content.firstElementChild};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function renderGrid(){
+  const g=$("#grid"); g.innerHTML="";
+  BOOKS.forEach(b=>{
+    const m=me.marks[b.id]; const s=m?.s;
+    const node=el(`<article class="bm ${b.gs?"gsx":""} ${s?"is-"+s:""}" style="--c:${b.c}">
+      <button class="cover" aria-label="${esc(b.t)} 상태 바꾸기">
+        <span class="spine"></span>
+        <span class="face">
+          <span class="no">${String(b.id).padStart(2,"0")}</span>
+          ${s?`<span class="state-tag">${s==="have"?"남아요":"구해요"}</span>`:""}
+          ${b.gs?`<span class="gs-tag">GS25 한정</span>`:""}
+          <span class="band"></span>
+          <span class="t">${esc(b.t)}</span>
+          <span class="pub">${b.poem?"시인선":"세계문학전집"}</span>
+        </span>
+      </button>
+      <div class="ctrl">
+        <div class="seg">
+          <button data-s="have" class="${s==="have"?"on-have":""}" aria-pressed="${s==="have"}">남아요</button>
+          <button data-s="need" class="${s==="need"?"on-need":""}" aria-pressed="${s==="need"}">구해요</button>
+        </div>
+        <label class="tg" aria-disabled="${s!=="have"}">
+          <span>포장</span><b>${s==="have"?(m.sealed?"미개봉":"개봉"):"—"}</b>
+          <span class="switch"><input type="checkbox" id="seal-${b.id}" ${s==="have"&&m.sealed?"checked":""} ${s!=="have"?"disabled":""} aria-label="미개봉 여부"><span></span></span>
+        </label>
+      </div>
+    </article>`);
+    node.querySelector(".cover").onclick=()=>{
+      const order=[undefined,"have","need"]; const nx=order[(order.indexOf(s)+1)%3];
+      setMark(b.id,nx);
+    };
+    node.querySelectorAll(".seg button").forEach(bt=>bt.onclick=()=>setMark(b.id, s===bt.dataset.s?undefined:bt.dataset.s));
+    node.querySelector("input").onchange=e=>{me.marks[b.id].sealed=e.target.checked;save();renderGrid();renderFeeds()};
+    g.append(node);
+  });
+  const h=myHave().length,n=myNeed().length,gsNeed=myNeed().filter(id=>B[id].gs).length;
+  $("#summary").innerHTML=`<span class="pill have">남아요 ${h}</span><span class="pill need">구해요 ${n}</span>${gsNeed?`<span class="pill gs">GS25 한정 구하는 중 ${gsNeed}</span>`:""}<span class="legend">20종 중 ${20-n}종 보유 추정</span>`;
+  $("#saleList").textContent=h?`판매 목록: ${myHave().map(id=>B[id].t).join(", ")}`:"교환 탭에서 ‘남아요’를 먼저 체크해 주세요";
+  $("#postSale").disabled=!h;
+  $("#postHint").textContent=(h||n)?`남아요 ${h} · 구해요 ${n} 상태로 올라갑니다`:"책갈피를 하나 이상 체크해 주세요";
+  $("#postTrade").disabled=!(h||n);
+}
+function setMark(id,s){
+  if(!s) delete me.marks[id];
+  else me.marks[id]={s, sealed: s==="have" ? (me.marks[id]?.sealed ?? true) : undefined};
+  save(); renderGrid(); renderFeeds();
+}
+
+function renderShip(){
+  $("#shipRow").innerHTML="";
+  Object.entries(SHIP).forEach(([k,v])=>{
+    const n=el(`<label class="chk"><input type="checkbox" id="ship-${k}" ${me.ship[k]?"checked":""}>${v}</label>`);
+    n.querySelector("input").onchange=e=>{me.ship[k]=e.target.checked;save()};
+    $("#shipRow").append(n);
+  });
+  $("#karrot").value=me.secret.karrot; $("#area").value=me.secret.area;
+  $("#karrot").oninput=e=>{me.secret.karrot=e.target.value.trim();save()};
+  $("#area").oninput=e=>{me.secret.area=e.target.value.trim();save()};
+}
+
+const left=ts=>{const ms=Math.max(0,ts+TTL-Date.now());const h=Math.floor(ms/HOUR),m=Math.floor(ms%HOUR/60e3);return `${h}:${String(m).padStart(2,"0")} 남음`};
+function chip(id,sealed,hit){const b=B[id];return `<span class="chip ${hit?"hit":""}" style="--c:${b.c}">${esc(b.t)}${sealed===undefined?"":`<small>${sealed?"미개봉":"개봉"}</small>`}</span>`}
+function postCard(p){
+  const mine=p.uid===me.id, m=mine?{iGet:[],iGive:[],mutual:false}:matchOf(p);
+  const node=el(`<article class="post ${m.mutual?"match":""} ${mine?"mine":""}">
+    <div class="p-top">
+      <span class="ava" style="background:hsl(${hue(p.alias)} 45% 42%)">${esc(p.alias[0])}</span>
+      <span class="alias">${esc(p.alias)}</span>${p.example?`<span class="ex">예시</span>`:""}
+      ${m.mutual?`<span class="mbadge">${p.type==="sale"?"구하던 것":"서로 맞음 "+m.score}</span>`:""}
+      ${mine?`<span class="ex">내 글</span>`:""}
+      <span class="ttl">${left(p.ts)}</span>
+    </div>
+    <div class="lines">
+      <div class="ln h"><span>${p.type==="sale"?"판매":"남아요"}</span><div class="chips">${p.have.map(h=>chip(h.id,h.sealed,m.iGet.includes(h.id))).join("")}</div></div>
+      ${p.type==="trade"&&p.need.length?`<div class="ln n"><span>구해요</span><div class="chips">${p.need.map(id=>chip(id,undefined,m.iGive.includes(id))).join("")}</div></div>`:""}
+      ${p.type==="sale"&&p.note?`<div style="font-size:13px">${esc(p.note)}</div>`:""}
+    </div>
+    <div class="p-foot">
+      ${p.type==="sale"?`<span class="price">${Number(p.price).toLocaleString("ko-KR")}원</span><span>/개</span>`:""}
+      <span class="ship">${p.ship.map(s=>`<span>${SHIP[s]}</span>`).join("")}</span>
+      ${mine?`<button class="btn sm ghost" data-del>내리기</button>`:`<button class="btn sm ${m.mutual?"primary":""}" data-ask>${p.type==="sale"?"구매 문의":"교환 신청"}</button>`}
+    </div>
+  </article>`);
+  node.querySelector("[data-ask]")?.addEventListener("click",()=>openDeal(p));
+  node.querySelector("[data-del]")?.addEventListener("click",()=>{posts=posts.filter(x=>x.id!==p.id);renderFeeds()});
+  return node;
+}
+function renderFeeds(){
+  posts=posts.filter(p=>Date.now()-p.ts<TTL); // 휘발
+  const sortFn=(a,b)=>(matchOf(b).mutual-matchOf(a).mutual)||(b.ts-a.ts);
+  [["trade","#feedTrade","#cntTrade","아직 올라온 교환글이 없어요. 첫 글을 올려보세요."],["sale","#feedSale","#cntSale","판매 중인 책갈피가 없어요."]].forEach(([t,f,c,emp])=>{
+    const list=posts.filter(p=>p.type===t).sort(sortFn);
+    const box=$(f); box.innerHTML="";
+    if(!list.length) box.append(el(`<div class="empty">${emp}</div>`));
+    list.forEach(p=>box.append(postCard(p)));
+    const hits=list.filter(p=>p.uid!==me.id&&matchOf(p).mutual).length;
+    $(c).textContent=hits?hits:"";
+  });
+}
+function renderBrag(){
+  const box=$("#bragFeed"); box.innerHTML="";
+  brags.forEach(b=>{
+    const n=el(`<article class="brag">
+      ${b.img?`<img alt="20종 인증샷" src="${b.img}">`:`<div class="ph">${BOOKS.map(x=>`<i style="--c:${x.c}"></i>`).join("")}</div>`}
+      <div class="bd"><div class="p-top"><span class="ava" style="background:hsl(${hue(b.alias)} 45% 42%)">${esc(b.alias[0])}</span><span class="alias">${esc(b.alias)}</span>${b.example?`<span class="ex">예시</span>`:""}<span class="pill gs" style="margin-left:auto">20/20</span></div>
+      <p>${esc(b.text)}</p>
+      <button class="cheer ${b.mine?"on":""}">축하해요 ${b.cheers}</button></div></article>`);
+    n.querySelector(".cheer").onclick=()=>{b.mine=!b.mine;b.cheers+=b.mine?1:-1;renderBrag()};
+    box.append(n);
+  });
+}
+
+/* ───────── 7. 게시 ───────── */
+const shipList=()=>Object.keys(SHIP).filter(k=>me.ship[k]);
+$("#postTrade").onclick=()=>{
+  if(!shipList().length) return toast("거래 방식을 하나 이상 골라주세요");
+  posts=posts.filter(p=>!(p.uid===me.id&&p.type==="trade"));
+  posts.unshift({id:uid(),uid:me.id,alias:me.alias,ts:Date.now(),type:"trade",
+    have:myHave().map(id=>({id,sealed:me.marks[id].sealed})),need:myNeed(),ship:shipList()});
+  renderFeeds(); toast("교환 피드에 올렸어요. 24시간 뒤 사라집니다");
+  setTimeout(simulateIncoming,4000);
+};
+$("#postSale").onclick=()=>{
+  if(!shipList().length) return toast("교환 탭에서 거래 방식을 먼저 골라주세요");
+  posts.unshift({id:uid(),uid:me.id,alias:me.alias,ts:Date.now(),type:"sale",
+    have:myHave().map(id=>({id,sealed:me.marks[id].sealed})),price:+$("#price").value||0,note:$("#saleNote").value.trim(),ship:shipList()});
+  renderFeeds(); toast("장터에 올렸어요");
+};
+$("#bragFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{$("#bragFile").dataset.img=r.result};r.readAsDataURL(f)};
+$("#postBrag").onclick=()=>{
+  const img=$("#bragFile").dataset.img; const text=$("#bragText").value.trim();
+  if(!img) return toast("인증샷을 먼저 골라주세요");
+  brags.unshift({id:uid(),alias:me.alias,text:text||"20종 완성!",img,cheers:0});
+  $("#bragText").value=""; delete $("#bragFile").dataset.img; $("#bragFile").value="";
+  renderBrag(); toast("자랑 피드에 올렸어요");
+};
+
+/* 실시간 느낌: 다른 익명 유저 글이 주기적으로 도착 (실서비스에선 WebSocket 이벤트) */
+function simulateIncoming(){
+  const need=myNeed(), have=myHave();
+  const give=need.length?[need[Math.floor(Math.random()*need.length)]]:[BOOKS[Math.floor(Math.random()*20)].id];
+  const want=have.length?[have[Math.floor(Math.random()*have.length)]]:[];
+  posts.unshift({id:uid(),uid:uid(),alias:anonAlias(),ts:Date.now(),example:true,type:"trade",
+    have:give.map(id=>({id,sealed:Math.random()>.4})),need:want,ship:[pick(["direct","half","normal"])]});
+  renderFeeds(); toast("방금 나와 맞는 교환글이 올라왔어요");
+}
+
+/* ───────── 8. 익명 대화 + 교환 성사 ───────── */
+let cur=null;
+function openDeal(p){
+  const id="d_"+p.id;
+  if(!deals[id]){
+    deals[id]={postId:p.id,parties:[me.id,p.uid],confirmed:{},msgs:[{who:"sys",text:"익명 대화가 열렸어요. 성사 전에는 닉네임·주소를 적지 마세요."}],other:p};
+    // 예시 상대의 비밀 정보 (실서비스에선 서버 vault에 저장된 값)
+    vault[p.uid]={karrot:"갈피수집_"+p.alias.slice(-4),area:pick(["마포구 망원동","성북구 안암동","수원시 영통구","부산 해운대구"])};
+    setTimeout(()=>pushMsg(id,"them",p.type==="sale"?"안녕하세요! 몇 개 생각하세요?":"안녕하세요, 저랑 맞는 것 같아요. 교환 괜찮으세요?"),700);
+  }
+  cur=id; vault[me.id]={...me.secret}; renderDeal(); $("#scrim").hidden=false; $("#msgIn").focus();
+}
+function pushMsg(id,who,text){deals[id].msgs.push({who,text});if(cur===id)renderDeal()}
+function renderDeal(){
+  const d=deals[cur],p=d.other,m=matchOf(p);
+  $("#shAva").textContent=p.alias[0]; $("#shAva").style.background=`hsl(${hue(p.alias)} 45% 42%)`;
+  $("#shTitle").textContent=p.alias;
+  $("#shDeal").innerHTML=p.type==="sale"
+    ? `<span>구매: ${p.have.map(h=>esc(B[h.id].t)).join(", ")} · ${Number(p.price).toLocaleString("ko-KR")}원/개</span>`
+    : `<span>받을 것: ${(m.iGet.length?m.iGet:p.have.map(h=>h.id)).map(i=>esc(B[i].t)).join(", ")}</span><span>줄 것: ${(m.iGive.length?m.iGive:["대화로 정하기"]).map(i=>B[i]?esc(B[i].t):i).join(", ")}</span>`;
+  const box=$("#msgs"); box.innerHTML="";
+  d.msgs.forEach(x=>box.append(el(`<div class="msg ${x.who}">${esc(x.text)}</div>`)));
+  const secret=revealFor(cur,me.id);
+  if(secret){
+    box.append(el(`<div class="secret"><h4>교환이 성사됐어요</h4>
+      <small>아래 정보는 이 거래 상대 한 명에게만 보입니다. 내 정보도 상대 화면에만 열렸어요.</small>
+      <div class="kv">당근 닉네임 <code>${esc(secret.karrot||"미입력")}</code><button class="btn sm ghost" data-copy="${esc(secret.karrot)}">복사</button></div>
+      <div class="kv">동네 <code>${esc(secret.area||"미입력")}</code></div>
+      <small>당근마켓 앱에서 닉네임을 검색해 채팅을 시작하세요. 이 창은 24시간 뒤 사라집니다.</small></div>`));
+    box.querySelector("[data-copy]").onclick=e=>{const v=e.target.dataset.copy;navigator.clipboard?.writeText(v).then(()=>toast("복사했어요")).catch(()=>toast("길게 눌러 직접 복사해 주세요"))};
+  }
+  box.scrollTop=box.scrollHeight;
+  $("#dotMe").classList.toggle("ok",!!d.confirmed[me.id]);
+  $("#dotThem").classList.toggle("ok",!!d.confirmed[p.uid]);
+  $("#btnDone").disabled=!!d.confirmed[me.id];
+  $("#btnDone").textContent=d.confirmed[me.id]?(secret?"성사 완료":"상대 확인 대기"):"교환 성사";
+  $("#confirmHint").textContent=secret?"연락처가 열렸어요":"둘 다 누르면 연락처가 서로에게만 열립니다";
+}
+$("#btnDone").onclick=()=>{
+  if(!me.secret.karrot&&!me.secret.area){toast("당근 닉네임이나 동네를 먼저 적어주세요");$("#scrim").hidden=true;$("#karrot").focus();return}
+  const d=deals[cur]; vault[me.id]={...me.secret}; d.confirmed[me.id]=true;
+  d.msgs.push({who:"sys",text:"나: 교환 성사를 눌렀어요"}); renderDeal();
+  const id=cur; setTimeout(()=>{deals[id].confirmed[deals[id].other.uid]=true;pushMsg(id,"sys","상대도 교환 성사를 눌렀어요")},1800);
+};
+$("#sendForm").onsubmit=e=>{
+  e.preventDefault(); const v=$("#msgIn").value.trim(); if(!v||!cur) return;
+  pushMsg(cur,"me",v); $("#msgIn").value="";
+  const id=cur; setTimeout(()=>pushMsg(id,"them",pick(["좋아요!","혹시 반값택배 괜찮으세요?","미개봉 맞아요 :)","네 그렇게 해요"])),1200);
+};
+$("#shClose").onclick=()=>{$("#scrim").hidden=true;cur=null};
+$("#scrim").onclick=e=>{if(e.target.id==="scrim")$("#shClose").click()};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#scrim").hidden)$("#shClose").click()});
+
+/* ───────── 9. 탭 · 토스트 ───────── */
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x===b));
+  document.querySelectorAll("section.tab").forEach(s=>s.hidden=s.id!=="tab-"+b.dataset.tab);
+});
+let tt; function toast(t){const n=$("#toast");n.textContent=t;n.hidden=false;clearTimeout(tt);tt=setTimeout(()=>n.hidden=true,2400)}
+
+$("#myAlias").textContent=me.alias;
+renderShip(); renderGrid(); renderFeeds(); renderBrag();
+setInterval(renderFeeds,60e3);
+</script>
+
+</body>
+</html>
